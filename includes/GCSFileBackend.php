@@ -400,26 +400,17 @@ class GCSFileBackend extends FileBackendStore {
 
 	protected function doGetLocalCopyMulti( array $params ) {
 		$fsFiles = [];
+		$sources = $params['srcs'] ?? (array)$params['src'];
 
-		if ( isset( $params['srcs'] ) ) {
-			$sources = $params['srcs'];
-			$concurrency = count( $params['srcs'] );
-		} else {
-			$sources = (array)$params['src'];
-			$concurrency = 1;
-		}
-
-		foreach ( array_chunk( $sources, $concurrency ) as $pathBatch ) {
-			foreach ( $pathBatch as $src ) {
-				// TODO: remove this duplicate check, getFileHttpUrl() already checks this.
-				$key = $this->getGCSName( $src );
-				if ( $key === null ) {
-					$fsFiles[$src] = null;
-					continue;
-				}
-
-				$fsFiles[$src] = $this->getLocalCopyCached( $src );
+		foreach ( $sources as $src ) {
+			// TODO: remove this duplicate check, getFileHttpUrl() already checks this.
+			$key = $this->getGCSName( $src );
+			if ( $key === null ) {
+				$fsFiles[$src] = null;
+				continue;
 			}
+
+			$fsFiles[$src] = $this->getLocalCopyCached( $src );
 		}
 		return $fsFiles;
 	}
