@@ -54,6 +54,12 @@ class GCSFileBackend extends FileBackendStore {
 	private $containerPaths;
 
 	/**
+	* Cache used in doGetFileStat(). Avoids extra requests to doesObjectExist().
+	* @var BagOStuff
+	*/
+	private $statCache = null;
+
+	/**
 	 * Maximum length of GCS object name.
 	 * See https://cloud.google.com/storage/docs/naming-objects for details.
 	 */
@@ -81,6 +87,7 @@ class GCSFileBackend extends FileBackendStore {
 		$this->bucket = $client->bucket($wgGCSBucket);
 
 		$this->containerPaths = $config['containerPaths'] ?? [];
+		$this->statCache = wfGetMainCache();
 	}
 
 	/**
@@ -182,6 +189,7 @@ class GCSFileBackend extends FileBackendStore {
 		wfDebugLog("gcs", "upload_start " . strval(microtime(true)) . " " . $key);
 		$ret =  $this->bucket->upload($params['content'], ['name' => $key, 'metadata' => [ 'metadata' => ['sha1base36' => $sha1Hash ]]]);
 		wfDebugLog("gcs", "upload_endoo " . strval(microtime(true)) . " " . $key);
+		$this->invalidateCacheFor( $params['dst'] );
 		return Status::newGood();
 	}
 
@@ -229,6 +237,7 @@ class GCSFileBackend extends FileBackendStore {
 		wfDebugLog("gcs", "copy_start " . strval(microtime(true)) . " " . $dstKey);
 		$object->copy($wgGCSBucket, ['name' => $dstKey]);
 		wfDebugLog("gcs", "copy_end " . strval(microtime(true)) . " " . $dstKey);
+		$this->invalidateCacheFor( $params['dst'] );
 		return Status::newGood();
 	}
 
@@ -250,6 +259,7 @@ class GCSFileBackend extends FileBackendStore {
 		wfDebugLog("gcs", "delete_start " . strval(microtime(true)) . " " . $key);
 		$res = $this->bucket->object($key)->delete();
 		wfDebugLog("gcs", "delete_end " . strval(microtime(true)) . " " . $key);
+		$this->invalidateCacheFor( $params['src'] );
 		return Status::newGood();
 	}
 
@@ -267,6 +277,24 @@ class GCSFileBackend extends FileBackendStore {
 	}
 
 	/**
+	 * Returns memcached key used by doGetFileStat() and invalidateCacheFor().
+	 * @param string $src
+	 * @return string
+	 */
+	protected function getStatCacheKey( $src ) {
+		return $this->statCache->makeKey( 'GCSFileBackend', 'StatCache', $src );
+	}
+
+	/**
+	 * Clear all local caches about some GCS object.
+	 * This is called after uploading/renaming/deleting an image.
+	 * @param string $src
+	 */
+	protected function invalidateCacheFor( $src ) {
+		$this->statCache->delete( $this->getStatCacheKey( $src ) );
+	}
+
+	/**
 	 * Obtain metadata (e.g. size, SHA1, etc.) of existing GCS object.
 	 * @param array $params
 	 * @return array|false|null
@@ -275,7 +303,27 @@ class GCSFileBackend extends FileBackendStore {
 	 * @phan-return array{mtime:string,size:int,etag:string,sha1:string}|false|null
 	 */
 	protected function doGetFileStat( array $params ) {
-		$key = $this->getGCSName( $params['src'] );
+		$src = $params['src'];
+		$cacheKey = $this->getStatCacheKey( $src );
+
+		$result = $this->statCache->get( $cacheKey );
+		if ( $result === false ) { /* Not found in the cache */
+			$result = $this->statUncached( $src );
+			$this->statCache->set( $cacheKey, $result, 86400 ); // 24 hours
+		}
+
+		return $result;
+	}
+
+	/**
+	* Uncached version of doGetFileStat(). Shouldn't be used outside of doGetFileStat().
+	* @param string $src
+	* @return array|false|null
+	*
+	* @phan-return array{mtime:string,size:int,etag:string,sha1:string}|false|null
+	*/
+	protected function statUncached( $src ) {
+		$key = $this->getGCSName( $src );
 
 		if ( $key === null ) {
 			return null;
