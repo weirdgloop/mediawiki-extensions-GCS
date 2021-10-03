@@ -19,7 +19,7 @@
 
 	<rule ref="MediaWiki.NamingConventions.ValidGlobalName">
 		<properties>
-			<!-- Global variable $IP must be used directly in [AmazonS3HooksTest.php] -->
+			<!-- Global variable $IP must be used directly in [GCSHooksTest.php] -->
 			<property name="ignoreList" type="array" value="$IP" />
 		</properties>
 	</rule>

@@ -1,15 +1,15 @@
 {
-	"name": "edwardspec/mediawiki-aws-s3",
-	"description": "Allows MediaWiki to use Amazon S3 to store uploaded files.",
+	"name": "weirdgloop/mediawiki-gcs",
+	"description": "Allows MediaWiki to use Google Cloud Storage to store uploaded files.",
 	"type": "mediawiki-extension",
 	"license": "GPL-2.0+",
 	"support": {
-		"docs": "https://www.mediawiki.org/wiki/Extension:AWS",
-		"issues": "https://github.com/edwardspec/mediawiki-aws-s3/issues",
-		"source": "https://github.com/edwardspec/mediawiki-aws-s3.git"
+		"docs": "https://www.mediawiki.org/wiki/Extension:GCS",
+		"issues": "https://gitlab.com/weirdgloop/mediawiki-gcs/issues",
+		"source": "https://gitlab.com/weirdgloop/mediawiki-gcs.git"
 	},
 	"require": {
-		"aws/aws-sdk-php": "^3.67",
+		"google/cloud-storage": "^1.25.0",
 		"composer/installers": "^1.5",
 		"guzzlehttp/guzzle": "6.3.3"
 	},
@@ -32,6 +32,6 @@
 		]
 	},
 	"extra": {
-		"installer-name": "AWS"
+		"installer-name": "GCS"
 	}
 }

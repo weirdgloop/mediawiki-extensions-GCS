@@ -2,5 +2,5 @@
 	"@metadata": {
 		"authors": []
 	},
-	"aws-desc": "Plugin for using Amazon Web Services"
+	"aws-desc": "Plugin for using Google Cloud Storage"
 }

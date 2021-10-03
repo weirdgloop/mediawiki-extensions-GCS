@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Implements the AWS extension for MediaWiki.
+ * Implements the GCS extension for MediaWiki.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,31 +29,18 @@ class TrimStringIterator extends IteratorIterator {
 	/** @var Iterator */
 	private $innerIterator;
 
-	/** @var int */
-	private $firstBytesToStrip;
-
-	/** @var int */
-	private $lastBytesToStrip;
-
 	/**
 	 * Make an iterator that removes starting/trailing bytes of values from its internal iterator.
 	 * @param Iterator $iterator Internal iterator over strings that need trimming.
 	 * @param int $firstBytesToStrip How many starting bytes to remove.
 	 * @param int $lastBytesToStrip How many trailing bytes to remove.
 	 */
-	public function __construct( Iterator $iterator, $firstBytesToStrip, $lastBytesToStrip = 0 ) {
+	public function __construct( Iterator $iterator) {
 		parent::__construct( $iterator );
-
-		$this->firstBytesToStrip = $firstBytesToStrip;
-		$this->lastBytesToStrip = $lastBytesToStrip;
 	}
 
 	public function current() {
-		$string = substr( parent::current(), $this->firstBytesToStrip );
-		if ( $this->lastBytesToStrip ) {
-			$string = substr( $string, 0, -$this->lastBytesToStrip );
-		}
-
-		return $string;
+		wfDebugLog("curro", "name");
+		return parent::current()->name();
 	}
 }
