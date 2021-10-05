@@ -25,7 +25,7 @@
  * Iterator that removes N bytes from the beginning and end of strings returned by inner Iterator.
  * Used in getFileListInternal() and getDirectoryListInternal().
  */
-class TrimStringIterator extends IteratorIterator {
+class GCSNameIterator extends IteratorIterator {
 	/** @var Iterator */
 	private $innerIterator;
 
