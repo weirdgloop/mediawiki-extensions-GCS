@@ -364,7 +364,7 @@ class GCSFileBackend extends FileBackendStore {
 		$prefix = $this->findContainerPrefix( $container );
 		$dir = $prefix . $dir;
 		wfDebugLog("gcs", "listfiles_" . $dir);
-		return GCSNameIterator($this->bucket->objects(['prefix' => $dir]));
+		return new GCSNameIterator($this->bucket->objects(['prefix' => $dir]));
 	}
 
 	/**
