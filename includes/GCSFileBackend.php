@@ -190,7 +190,7 @@ class GCSFileBackend extends FileBackendStore {
 		$sha1Hash = Wikimedia\base_convert( $sha1, 16, 36, 31, true, 'auto' );
 		//TODO: add sha1Hash
 		$ret =  $this->bucket->upload($params['content'], ['name' => $key]);
-
+		wfDebugLog("gcs_upload", $key);
 		return Status::newGood();
 	}
 
@@ -236,7 +236,7 @@ class GCSFileBackend extends FileBackendStore {
 		$object = $this->bucket->object($srcKey);
 		global $wgGCSBucket;
 		$object->copy($wgGCSBucket, ['name' => $dstKey]);
-
+		wfDebugLog("gcs_copy", $dstKey);
 		return Status::newGood();
 	}
 
@@ -257,7 +257,7 @@ class GCSFileBackend extends FileBackendStore {
 		}
 
 		$res = $this->bucket->object($key)->delete();
-
+		wfDebugLog("gcs_delete", $key);
 		return Status::newGood();
 	}
 
@@ -295,6 +295,7 @@ class GCSFileBackend extends FileBackendStore {
 		// after creating it, because the result will still be "file not found".
 		try {
 			$res = $this->bucket->object($key)->info();
+			wfDebugLog("gcs_info", $key);
 		} catch ( GoogleException $e ) {
 			return false;
 		}
@@ -323,6 +324,8 @@ class GCSFileBackend extends FileBackendStore {
 
 		$key = $this->getGCSName( $params['src'] );
 		try {
+			// TODO: don't hardcode
+			wfDebugLog("signed_url", $key);
 			return $this->bucket->object($key)->signedUrl(1700000000);
 		} catch ( GoogleException $e ) {
 			return null;
@@ -342,6 +345,8 @@ class GCSFileBackend extends FileBackendStore {
 		$topOnly = !empty( $params['topOnly'] );
 		$prefix = $this->findContainerPrefix( $container );
 		$bucketDir = $prefix . $dir; // Relative to GCS bucket $bucket, not $container
+		wfDebugLog("gcs_listdir", $dir);
+		// TODO: this doesn't work
 		return $this->bucket->objects(['prefix' => $bucketDir]);
 	}
 
@@ -358,6 +363,7 @@ class GCSFileBackend extends FileBackendStore {
 		$topOnly = !empty( $params['topOnly'] );
 		$prefix = $this->findContainerPrefix( $container );
 		$dir = $prefix . $dir;
+		wfDebugLog("gcs_listfiles", $dir);
 		return GCSNameIterator($this->bucket->objects(['prefix' => $dir]));
 	}
 
