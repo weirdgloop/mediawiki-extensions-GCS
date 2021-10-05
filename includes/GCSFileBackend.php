@@ -373,7 +373,7 @@ class GCSFileBackend extends FileBackendStore {
 	 * @return FSFile|null Local temporary file that contains downloaded contents.
 	 */
 	protected function getLocalCopyCached( $src ) {
-		$ext = FSFile::extensionFromPath( $virtualPath );
+		$ext = FSFile::extensionFromPath( $src );
 		$file = TempFSFile::factory( 'localcopy_', $ext );
 		$dstPath = $file->getPath();
 
