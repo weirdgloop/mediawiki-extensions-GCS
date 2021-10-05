@@ -40,7 +40,6 @@ class TrimStringIterator extends IteratorIterator {
 	}
 
 	public function current() {
-		wfDebugLog("curro", "name");
 		return parent::current()->name();
 	}
 }
