@@ -127,15 +127,7 @@ class GCSFileBackend extends FileBackendStore {
 		}
 
 		// In latter case, "dir1/dir2/" will be prepended to $filename.
-		$containerPath = $this->containerPaths[$container];
-		$firstSlashPos = strpos( $containerPath, '/' );
-		if ( $firstSlashPos === false ) {
-			fopen($containerPath, 'w');
-			return [ $containerPath, "" ];
-		}
-
-		$prefix = substr( $containerPath, $firstSlashPos + 1 );
-
+		$prefix = $this->containerPaths[$container];
 		if ( $prefix && substr( $prefix, -1 ) !== '/' ) {
 			$prefix .= '/'; # Add trailing slash, e.g. "thumb/".
 		}
@@ -189,8 +181,9 @@ class GCSFileBackend extends FileBackendStore {
 
 		$sha1Hash = Wikimedia\base_convert( $sha1, 16, 36, 31, true, 'auto' );
 		//TODO: add sha1Hash
-		$ret =  $this->bucket->upload($params['content'], ['name' => $key]);
-		wfDebugLog("gcs", "upload_" . $key);
+		wfDebugLog("gcs", "upload_start " . strval(microtime(true)) . " " . $key);
+		$ret =  $this->bucket->upload($params['content'], ['name' => $key, 'metadata' => [ 'metadata' => ['sha1base36' => $sha1Hash ]]]);
+		wfDebugLog("gcs", "upload_endoo " . strval(microtime(true)) . " " . $key);
 		return Status::newGood();
 	}
 
@@ -235,8 +228,9 @@ class GCSFileBackend extends FileBackendStore {
 
 		$object = $this->bucket->object($srcKey);
 		global $wgGCSBucket;
+		wfDebugLog("gcs", "copy_start " . strval(microtime(true)) . " " . $dstKey);
 		$object->copy($wgGCSBucket, ['name' => $dstKey]);
-		wfDebugLog("gcs", "copy_" . $dstKey);
+		wfDebugLog("gcs", "copy_end " . strval(microtime(true)) . " " . $dstKey);
 		return Status::newGood();
 	}
 
@@ -255,9 +249,9 @@ class GCSFileBackend extends FileBackendStore {
 			$status->fatal( 'backend-fail-invalidpath', $params['src'] );
 			return $status;
 		}
-
+		wfDebugLog("gcs", "delete_start " . strval(microtime(true)) . " " . $key);
 		$res = $this->bucket->object($key)->delete();
-		wfDebugLog("gcs", "delete_" . $key);
+		wfDebugLog("gcs", "delete_end " . strval(microtime(true)) . " " . $key);
 		return Status::newGood();
 	}
 
@@ -294,15 +288,17 @@ class GCSFileBackend extends FileBackendStore {
 		// 2) if the bucket doesn't exist, there is no point in repeating this operation
 		// after creating it, because the result will still be "file not found".
 		try {
+			wfDebugLog("gcs", "info_start " . strval(microtime(true)) . " " . $key);
 			$res = $this->bucket->object($key)->info();
-		wfDebugLog("gcs", "info_" . $key);
+			wfDebugLog("gcs", "info_end " . strval(microtime(true)) . " " . $key);
 		} catch ( GoogleException $e ) {
+			wfDebugLog("gcs", "info_endfail " . strval(microtime(true)) . " " . $key);
 			return false;
 		}
 
 		$sha1 = '';
-		if ( isset( $res['Metadata']['sha1base36'] ) ) {
-			$sha1 = $res['Metadata']['sha1base36'];
+		if ( isset( $res['metadata']['sha1base36'] ) ) {
+			$sha1 = $res['metadata']['sha1base36'];
 		}
 
 		return [
@@ -325,8 +321,10 @@ class GCSFileBackend extends FileBackendStore {
 		$key = $this->getGCSName( $params['src'] );
 		try {
 			// TODO: don't hardcode
-		wfDebugLog("gcs", "signed_url" . $key);
-			return $this->bucket->object($key)->signedUrl(1700000000);
+			wfDebugLog("gcs", "figned_start " . strval(microtime(true)) . " " . $key);
+			$val = $this->bucket->object($key)->signedUrl(1700000000);
+			wfDebugLog("gcs", "figned_end " . strval(microtime(true)) . " " . $key);
+			return $val;
 		} catch ( GoogleException $e ) {
 			return null;
 		}
@@ -345,9 +343,11 @@ class GCSFileBackend extends FileBackendStore {
 		$topOnly = !empty( $params['topOnly'] );
 		$prefix = $this->findContainerPrefix( $container );
 		$bucketDir = $prefix . $dir; // Relative to GCS bucket $bucket, not $container
-		wfDebugLog("gcs", "listdir_" . $dir);
+		wfDebugLog("gcs", "listdir_start " . strval(microtime(true)) . " " . $bucketDir);
 		// TODO: this doesn't work
-		return $this->bucket->objects(['prefix' => $bucketDir]);
+		$val = $this->bucket->objects(['prefix' => $bucketDir]);
+		wfDebugLog("gcs", "listdir_end " . strval(microtime(true)) . " " . $bucketDir);
+		return $val;
 	}
 
 	/**
@@ -363,8 +363,10 @@ class GCSFileBackend extends FileBackendStore {
 		$topOnly = !empty( $params['topOnly'] );
 		$prefix = $this->findContainerPrefix( $container );
 		$dir = $prefix . $dir;
-		wfDebugLog("gcs", "listfiles_" . $dir);
-		return new GCSNameIterator($this->bucket->objects(['prefix' => $dir]));
+		wfDebugLog("gcs", "listfiles_start " . strval(microtime(true)) . " " . $dir);
+		$val = new GCSNameIterator($this->bucket->objects(['prefix' => $dir]), $dir);
+		wfDebugLog("gcs", "listfiles_end " . strval(microtime(true)) . " " . $dir);
+		return $val;
 	}
 
 	/**
@@ -381,6 +383,7 @@ class GCSFileBackend extends FileBackendStore {
 			return $file;
 		}
 
+		wfDebugLog("gcs", "cp_start " . strval(microtime(true)) . " " . $src);
 		// Not found in the cache. Download from GCS.
 		$srcPath = $this->getFileHttpUrl( [ 'src' => $src ] );
 		if ( !$srcPath ) {
@@ -390,6 +393,8 @@ class GCSFileBackend extends FileBackendStore {
 		wfMkdirParents( dirname( $dstPath ) );
 
 		$ok = copy( $srcPath, $dstPath );
+
+		wfDebugLog("gcs", "cp_end " . strval(microtime(true)) . " " . $src);
 
 		if ( !$ok ) {
 			return null; // Couldn't download the file from GCS (e.g. network issue)

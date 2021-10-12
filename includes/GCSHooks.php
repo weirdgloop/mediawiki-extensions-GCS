@@ -71,13 +71,14 @@ class GCSHooks {
 			'url'               => wfScript( 'img_auth' ),
 			'hashLevels'        => 0,
 			'deletedHashLevels' => 0,
-			'zones'             => array_fill_keys( $zones, [ 'url' => false ] )
+			'zones'             => array_fill_keys( $zones, [ 'url' => false ] ),
+			'transformVia404' => true
 		];
 
 		// Not a private wiki: $publicZones must have an URL
 		foreach ( $publicZones as $zone ) {
 			$wgLocalFileRepo['zones'][$zone] = [
-				'url' => $this->getRootForZone($zone)
+				'url' => '/images' . $this->getRootForZone($zone)
 			];
 		}
 
@@ -98,18 +99,18 @@ class GCSHooks {
 	protected function getRootForZone( $zone ) {
 		switch ( $zone ) {
 			case 'public':
-				return '/images';
+				return '';
 
 			case 'thumb':
-				return '/images/thumb';
+				return '/thumb';
 
 			case 'deleted':
-				return '/images/deleted';
+				return '/deleted';
 
 			case 'temp':
-				return '/images/temp';
+				return '/temp';
 		}
 
-		return "/images/$zone"; # Fallback value for unknown zone (added in recent version of MediaWiki?)
+		return "/$zone"; # Fallback value for unknown zone (added in recent version of MediaWiki?)
 	}
 }
