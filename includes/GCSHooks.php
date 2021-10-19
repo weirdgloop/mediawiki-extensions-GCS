@@ -61,8 +61,8 @@ class GCSHooks {
 		global $wgFileBackends, $wgLocalFileRepo, $wgGCSTopSubdirectory, $wgScriptPath;
 
 		/* Needed zones */
-		$zones = [ 'public', 'thumb', 'deleted', 'temp' ];
-		$publicZones = [ 'public', 'thumb' ];
+		$zones = [ 'public', 'thumb', 'deleted', 'temp', 'transcoded' ];
+		$publicZones = [ 'public', 'thumb', 'transcoded' ];
 
 		$wgLocalFileRepo = [
 			'class'             => 'LocalRepo',
@@ -109,6 +109,9 @@ class GCSHooks {
 
 			case 'temp':
 				return '/temp';
+
+			case 'transcoded':
+				return '/transcoded';
 		}
 
 		return "/$zone"; # Fallback value for unknown zone (added in recent version of MediaWiki?)
