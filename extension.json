@@ -25,9 +25,7 @@
 		"GCSHooks::setup"
 	],
 	"config": {
-		"@doc1": "Credentials to connect to GCS."
-
+		"GCSCredentials": null
 	},
-
 	"manifest_version": 1
 }
