@@ -58,7 +58,7 @@ class GCSHooks {
 	 * Replace $wgLocalRepo with GCS.
 	 */
 	protected function replaceLocalRepo() {
-		global $wgFileBackends, $wgLocalFileRepo, $wgGCSTopSubdirectory;
+		global $wgFileBackends, $wgLocalFileRepo, $wgGCSTopSubdirectory, $wgScriptPath;
 
 		/* Needed zones */
 		$zones = [ 'public', 'thumb', 'deleted', 'temp' ];
@@ -68,7 +68,7 @@ class GCSHooks {
 			'class'             => 'LocalRepo',
 			'name'              => 'local',
 			'backend'           => 'GCS',
-			'url'               => wfScript( 'img_auth' ),
+			'url'               => $wgScriptPath . '/images',
 			'hashLevels'        => 0,
 			'deletedHashLevels' => 0,
 			'zones'             => array_fill_keys( $zones, [ 'url' => false ] ),
