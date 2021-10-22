@@ -71,6 +71,7 @@ class GCSHooks {
 			'timeline',
 			'transcoded',
 		];
+		$zones = [ ...$privateZones, ...$publicZones ];
 
 		$wgLocalFileRepo = [
 			'class'             => 'LocalRepo',
@@ -93,7 +94,6 @@ class GCSHooks {
 		// Container names are prefixed by wfWikiID(), which depends on $wgDBPrefix and $wgDBname.
 		$wikiId = wfWikiID();
 		$containerPaths = [];
-		$zones = [ ...$privateZones, ...$publicZones ];
 		foreach ( $zones as $zone ) {
 			$containerPaths["$wikiId-local-$zone"] = $wikiId . $this->getRootForZone($zone);
 		}
