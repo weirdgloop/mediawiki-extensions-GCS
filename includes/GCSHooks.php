@@ -68,6 +68,7 @@ class GCSHooks {
 		$publicZones = [
 			'public',
 			'thumb',
+			'timeline',
 			'transcoded',
 		];
 
@@ -96,6 +97,8 @@ class GCSHooks {
 		foreach ( $zones as $zone ) {
 			$containerPaths["$wikiId-local-$zone"] = $wikiId . $this->getRootForZone($zone);
 		}
+		// EasyTimeline is unfortunately special.
+		$containerPaths['timeline-render'] = $wikiId . $this->getRootForZone('timeline');
 		$wgFileBackends['gcs']['containerPaths'] = $containerPaths;
 	}
 
