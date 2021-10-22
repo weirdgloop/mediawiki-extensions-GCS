@@ -61,8 +61,15 @@ class GCSHooks {
 		global $wgFileBackends, $wgLocalFileRepo, $wgGCSTopSubdirectory, $wgScriptPath;
 
 		/* Needed zones */
-		$zones = [ 'public', 'thumb', 'deleted', 'temp', 'transcoded' ];
-		$publicZones = [ 'public', 'thumb', 'transcoded' ];
+		$privateZones = [
+			'deleted',
+			'temp',
+		];
+		$publicZones = [
+			'public',
+			'thumb',
+			'transcoded',
+		];
 
 		$wgLocalFileRepo = [
 			'class'             => 'LocalRepo',
@@ -85,35 +92,19 @@ class GCSHooks {
 		// Container names are prefixed by wfWikiID(), which depends on $wgDBPrefix and $wgDBname.
 		$wikiId = wfWikiID();
 		$containerPaths = [];
+		$zones = [ ...$privateZones, ...$publicZones ];
 		foreach ( $zones as $zone ) {
-			$containerPaths["$wikiId-local-$zone"] = $wgGCSTopSubdirectory . $this->getRootForZone($zone);
+			$containerPaths["$wikiId-local-$zone"] = $wikiId . $this->getRootForZone($zone);
 		}
 		$wgFileBackends['gcs']['containerPaths'] = $containerPaths;
 	}
 
 	/**
 	 * Returns root directory within GCS bucket name for $zone.
-	 * @param string $zone Name of the zone, can be 'public', 'thumb', 'temp' or 'deleted'.
-	 * @return string Relative path, e.g. "" or "/thumb" (without trailing slash).
+	 * @param string $zone Name of the zone, e.g. 'public' or 'thumb'.
+	 * @return string Relative path, e.g. '' or '/thumb' (without trailing slash).
 	 */
 	protected function getRootForZone( $zone ) {
-		switch ( $zone ) {
-			case 'public':
-				return '';
-
-			case 'thumb':
-				return '/thumb';
-
-			case 'deleted':
-				return '/deleted';
-
-			case 'temp':
-				return '/temp';
-
-			case 'transcoded':
-				return '/transcoded';
-		}
-
-		return "/$zone"; # Fallback value for unknown zone (added in recent version of MediaWiki?)
+		return ( $zone === 'public' ) ? '' : "/$zone";
 	}
 }
