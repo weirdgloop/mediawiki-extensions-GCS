@@ -316,12 +316,13 @@ class GCSFileBackend extends FileBackendStore {
 	 * @phan-param array{src:string} $params
 	 */
 	public function getFileHttpUrl( array $params ) {
+		$ttl = $params['ttl'] ?? 86400;
+		$expires = time() + $ttl;
 
 		$key = $this->getGCSName( $params['src'] );
 		try {
-			// TODO: don't hardcode
 			wfDebugLog("gcs", "figned_start " . strval(microtime(true)) . " " . $key);
-			$val = $this->bucket->object($key)->signedUrl(1700000000);
+			$val = $this->bucket->object($key)->signedUrl($expires);
 			wfDebugLog("gcs", "figned_end " . strval(microtime(true)) . " " . $key);
 			return $val;
 		} catch ( GoogleException $e ) {
