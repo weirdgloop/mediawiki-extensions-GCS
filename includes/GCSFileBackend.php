@@ -21,10 +21,6 @@
  * @file
  */
 
-if ( !class_exists( "\\Google\\Cloud\\Storage\\StorageClient" ) ) {
-	require_once __DIR__ . '/../vendor/autoload.php';
-}
-
 use Google\Cloud\Core\Exception\GoogleException;
 use Google\Cloud\Storage\StorageClient;
 use Psr\Log\LogLevel;
@@ -40,18 +36,9 @@ use Psr\Log\LogLevel;
  */
 class GCSFileBackend extends FileBackendStore {
 	/**
-	 * GCS bucket to use
+	 * GCS bucket to use for file storage.
 	 */
 	private $bucket;
-
-	/**
-	 * @var array
-	 * Maps names of containers (e.g. mywiki-local-thumb) to "/some/path"
-	 * where "some/path" is the "top directory" prefix of GCS object names.
-	 *
-	 * @phan-var array<string,string>
-	 */
-	private $containerPaths;
 
 	/**
 	 * Maximum length of GCS object name.
@@ -64,12 +51,12 @@ class GCSFileBackend extends FileBackendStore {
 	 *
 	 * The configuration array may contain the following keys in addition
 	 * to the keys accepted by FileBackendStore::__construct:
-	 *  * containerPaths (required) - Mapping of container names to paths
+	 *  * gcsBucket (required) - GCS bucket to use for file storage.
+	 *  * gcsKeyFilePath (optional) - Google Cloud credentials file, optional with GKE Workload Identity.
 	 *
 	 * @param array $config
 	 */
 	public function __construct( array $config ) {
-		global $wgGCSBucket, $wgGCSCredentials;
 		parent::__construct( $config );
 
 		// Cache container information to mask latency
@@ -77,10 +64,9 @@ class GCSFileBackend extends FileBackendStore {
 			$this->memCache = $config['wanCache'];
 		}
 
-		$client = new StorageClient(['keyFilePath' => $wgGCSCredentials]);
-		$this->bucket = $client->bucket($wgGCSBucket);
-
-		$this->containerPaths = (array)$config['containerPaths'];
+		// Defaults to using Workload Identity on GKE rather than requiring credentials be set.
+		$client = new StorageClient([ 'keyFilePath' => $config['gcsKeyFilePath'] ?? null ]);
+		$this->bucket = $client->bucket( $config['gcsBucket'] );
 	}
 
 	/**
@@ -122,13 +108,9 @@ class GCSFileBackend extends FileBackendStore {
 	 * @return string: prefix.
 	 */
 	protected function findContainerPrefix( $container ) {
-		if ( empty( $this->containerPaths[$container] ) ) {
-			return null; // Not configured
-		}
-
 		// In latter case, "dir1/dir2/" will be prepended to $filename.
-		$prefix = $this->containerPaths[$container];
-		if ( $prefix && substr( $prefix, -1 ) !== '/' ) {
+		$prefix = $container;
+		if ( substr( $prefix, -1 ) !== '/' ) {
 			$prefix .= '/'; # Add trailing slash, e.g. "thumb/".
 		}
 		return $prefix;
@@ -141,6 +123,9 @@ class GCSFileBackend extends FileBackendStore {
 	 */
 	protected function getGCSName( $storagePath ) {
 		list( $container, $filename ) = $this->resolveStoragePathReal( $storagePath );
+		if ( $filename === null ) {
+			return null;
+		}
 		$prefix = $this->findContainerPrefix( $container );
 		return $prefix . $filename;
 	}
@@ -157,7 +142,7 @@ class GCSFileBackend extends FileBackendStore {
 
 		$key = $this->getGCSName( $params['dst'] );
 
-		if ( $key == null ) {
+		if ( $key === null ) {
 			return Status::newFatal( 'backend-fail-invalidpath', $params['dst'] );
 		}
 
@@ -215,10 +200,10 @@ class GCSFileBackend extends FileBackendStore {
 		$srcKey = $this->getGCSName( $params['src'] );
 		$dstKey = $this->getGCSName( $params['dst'] );
 
-		if ( $srcKey == null ) {
+		if ( $srcKey === null ) {
 			$status->fatal( 'backend-fail-invalidpath', $params['src'] );
 		}
-		if ( $dstKey == null ) {
+		if ( $dstKey === null ) {
 			$status->fatal( 'backend-fail-invalidpath', $params['dst'] );
 		}
 
@@ -227,9 +212,8 @@ class GCSFileBackend extends FileBackendStore {
 		}
 
 		$object = $this->bucket->object($srcKey);
-		global $wgGCSBucket;
 		wfDebugLog("gcs", "copy_start " . strval(microtime(true)) . " " . $dstKey);
-		$object->copy($wgGCSBucket, ['name' => $dstKey]);
+		$object->copy($this->bucket, ['name' => $dstKey]);
 		wfDebugLog("gcs", "copy_end " . strval(microtime(true)) . " " . $dstKey);
 		return Status::newGood();
 	}
@@ -245,7 +229,7 @@ class GCSFileBackend extends FileBackendStore {
 		$status = Status::newGood();
 
 		$key = $this->getGCSName( $params['src'] );
-		if ( $key == null ) {
+		if ( $key === null ) {
 			$status->fatal( 'backend-fail-invalidpath', $params['src'] );
 			return $status;
 		}
@@ -279,7 +263,7 @@ class GCSFileBackend extends FileBackendStore {
 	protected function doGetFileStat( array $params ) {
 		$key = $this->getGCSName( $params['src'] );
 
-		if ( $key == null ) {
+		if ( $key === null ) {
 			return null;
 		}
 

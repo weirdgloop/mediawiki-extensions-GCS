@@ -18,14 +18,7 @@
 	},
 	"AutoloadClasses": {
 		"GCSFileBackend": "includes/GCSFileBackend.php",
-		"GCSHooks": "includes/GCSHooks.php",
 		"GCSNameIterator": "includes/GCSNameIterator.php"
-	},
-	"ExtensionFunctions": [
-		"GCSHooks::setup"
-	],
-	"config": {
-		"GCSCredentials": null
 	},
 	"manifest_version": 1
 }
