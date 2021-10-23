@@ -18,7 +18,13 @@
 	},
 	"AutoloadClasses": {
 		"GCSFileBackend": "includes/GCSFileBackend.php",
+		"GCSHooks": "includes/GCSHooks.php",
 		"GCSNameIterator": "includes/GCSNameIterator.php"
+	},
+	"callback": "GCSHooks::register",
+	"config": {
+		"GCSBucket": null,
+		"GCSCredentials": null
 	},
 	"manifest_version": 1
 }

@@ -21,6 +21,10 @@
  * @file
  */
 
+if ( !class_exists( "\\Google\\Cloud\\Storage\\StorageClient" ) ) {
+	require_once __DIR__ . '/../vendor/autoload.php';
+}
+
 use Google\Cloud\Core\Exception\GoogleException;
 use Google\Cloud\Storage\StorageClient;
 use Psr\Log\LogLevel;
@@ -36,9 +40,18 @@ use Psr\Log\LogLevel;
  */
 class GCSFileBackend extends FileBackendStore {
 	/**
-	 * GCS bucket to use for file storage.
+	 * GCS bucket to use
 	 */
 	private $bucket;
+
+	/**
+	 * @var array
+	 * Maps names of containers (e.g. mywiki-local-thumb) to "/some/path"
+	 * where "some/path" is the "top directory" prefix of GCS object names.
+	 *
+	 * @phan-var array<string,string>
+	 */
+	private $containerPaths;
 
 	/**
 	 * Maximum length of GCS object name.
@@ -51,12 +64,12 @@ class GCSFileBackend extends FileBackendStore {
 	 *
 	 * The configuration array may contain the following keys in addition
 	 * to the keys accepted by FileBackendStore::__construct:
-	 *  * gcsBucket (required) - GCS bucket to use for file storage.
-	 *  * gcsKeyFilePath (optional) - Google Cloud credentials file, optional with GKE Workload Identity.
+	 *  * containerPaths (required) - Mapping of container names to paths
 	 *
 	 * @param array $config
 	 */
 	public function __construct( array $config ) {
+		global $wgGCSBucket, $wgGCSCredentials;
 		parent::__construct( $config );
 
 		// Cache container information to mask latency
@@ -64,9 +77,10 @@ class GCSFileBackend extends FileBackendStore {
 			$this->memCache = $config['wanCache'];
 		}
 
-		// Defaults to using Workload Identity on GKE rather than requiring credentials be set.
-		$client = new StorageClient([ 'keyFilePath' => $config['gcsKeyFilePath'] ?? null ]);
-		$this->bucket = $client->bucket( $config['gcsBucket'] );
+		$client = new StorageClient(['keyFilePath' => $wgGCSCredentials]);
+		$this->bucket = $client->bucket($wgGCSBucket);
+
+		$this->containerPaths = $config['containerPaths'] ?? [];
 	}
 
 	/**
@@ -109,8 +123,8 @@ class GCSFileBackend extends FileBackendStore {
 	 */
 	protected function findContainerPrefix( $container ) {
 		// In latter case, "dir1/dir2/" will be prepended to $filename.
-		$prefix = $container;
-		if ( substr( $prefix, -1 ) !== '/' ) {
+		$prefix = $this->containerPaths[$container] ?? null;
+		if ( $prefix && substr( $prefix, -1 ) !== '/' ) {
 			$prefix .= '/'; # Add trailing slash, e.g. "thumb/".
 		}
 		return $prefix;
@@ -212,8 +226,9 @@ class GCSFileBackend extends FileBackendStore {
 		}
 
 		$object = $this->bucket->object($srcKey);
+		global $wgGCSBucket;
 		wfDebugLog("gcs", "copy_start " . strval(microtime(true)) . " " . $dstKey);
-		$object->copy($this->bucket, ['name' => $dstKey]);
+		$object->copy($wgGCSBucket, ['name' => $dstKey]);
 		wfDebugLog("gcs", "copy_end " . strval(microtime(true)) . " " . $dstKey);
 		return Status::newGood();
 	}
