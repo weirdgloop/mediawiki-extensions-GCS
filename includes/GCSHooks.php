@@ -38,6 +38,7 @@ class GCSHooks {
 		];
 		$publicZones = [
 			'public',
+			'sitemaps',
 			'thumb',
 			'timeline',
 			'transcoded',
@@ -70,6 +71,8 @@ class GCSHooks {
 		foreach ( $zones as $zone ) {
 			$containerPaths["$wikiId-local-$zone"] = $wikiId . self::getRootForZone($zone);
 		}
+		// GloopTweaks's "sitemaps" is unfortunately special.
+		$containerPaths["$wikiId-sitemaps"] = $wikiId . self::getRootForZone('sitemaps');
 		// EasyTimeline is unfortunately special.
 		$containerPaths["$wikiId-timeline-render"] = $wikiId . self::getRootForZone('timeline');
 
