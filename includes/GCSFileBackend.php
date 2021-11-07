@@ -57,7 +57,7 @@ class GCSFileBackend extends FileBackendStore {
 	 * Maximum length of GCS object name.
 	 * See https://cloud.google.com/storage/docs/naming-objects for details.
 	 */
-	const MAX_GCS_OBJECT_NAME_LENGTH = 1024;
+	protected const MAX_GCS_OBJECT_NAME_LENGTH = 1024;
 
 	/**
 	 * Construct the backend. Doesn't take any extra config parameters.
