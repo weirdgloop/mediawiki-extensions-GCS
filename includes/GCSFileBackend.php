@@ -160,8 +160,7 @@ class GCSFileBackend extends FileBackendStore {
 			return Status::newFatal( 'backend-fail-invalidpath', $params['dst'] );
 		}
 
-		$contentType = isset( $params['headers']['Content-Type'] ) ?
-			$params['headers']['Content-Type'] : null;
+		$contentType = $params['headers']['Content-Type'] ?? null;
 
 		if ( is_resource( $params['content'] ) && isset( $params['src'] ) ) {
 			// If we are here, it means that doCreateInternal() was called from doStoreInternal().
@@ -295,10 +294,7 @@ class GCSFileBackend extends FileBackendStore {
 			return false;
 		}
 
-		$sha1 = '';
-		if ( isset( $res['metadata']['sha1base36'] ) ) {
-			$sha1 = $res['metadata']['sha1base36'];
-		}
+		$sha1 = $res['metadata']['sha1base36'] ?? '';
 
 		return [
 			'mtime' => wfTimestamp( TS_MW, $res['updated'] ),
