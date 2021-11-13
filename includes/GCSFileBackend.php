@@ -151,37 +151,20 @@ class GCSFileBackend extends FileBackendStore {
 		return $prefix . $filename;
 	}
 
-	// phpcs:disable Generic.Files.LineLength.TooLong
-
 	/**
-	 * Create a new GCS object.
+	 * Create a new GCS object, used by both doCreateInternal() and doStoreInternal().
 	 * @param array $params
+	 * @param string $sha1 Checksum of this file.
+	 * @param string $contentType Correct (explicitly known or guessed) MIME type of this file.
 	 * @return Status
+	 *
+	 * @phan-param array{content:string|resource,dst:string,headers?:array<string,string>} $params
 	 */
-	protected function doCreateInternal( array $params ) {
-		// phpcs:enable Generic.Files.LineLength.TooLong
-
+	protected function createOrStore( array $params, $sha1, $contentType ) {
 		$key = $this->getGCSName( $params['dst'] );
 
 		if ( $key === null ) {
 			return Status::newFatal( 'backend-fail-invalidpath', $params['dst'] );
-		}
-
-		$contentType = $params['headers']['Content-Type'] ?? null;
-
-		if ( is_resource( $params['content'] ) && isset( $params['src'] ) ) {
-			// If we are here, it means that doCreateInternal() was called from doStoreInternal().
-			$sha1 = sha1_file( $params['src'] );
-			if ( !$contentType ) {
-				// Guess the MIME type from filename.
-				$contentType = $this->getContentType( $params['dst'], null, $params['src'] );
-			}
-		} else {
-			$sha1 = sha1( $params['content'] );
-			if ( !$contentType ) {
-				// Guess the MIME type from contents.
-				$contentType = $this->getContentType( $params['dst'], $params['content'], null );
-			}
 		}
 
 		$sha1Hash = Wikimedia\base_convert( $sha1, 16, 36, 31, true, 'auto' );
@@ -194,17 +177,35 @@ class GCSFileBackend extends FileBackendStore {
 	}
 
 	/**
-	 * Same as doCreateInternal(), but the source is a local file, not variable in memory.
+	 * Create a new GCS object from a string with its contents.
 	 * @param array $params
 	 * @return Status
+	 *
+	 * @phan-param array{content:string,dst:string,headers?:array<string,string>} $params
 	 */
-	protected function doStoreInternal( array $params ) {
-		// Supply the open file to doCreateInternal() and have it do the rest.
-		$params['content'] = fopen( $params['src'], 'r' );
-		return $this->doCreateInternal( $params );
+	protected function doCreateInternal( array $params ) {
+		$sha1 = sha1( $params['content'] );
+		$contentType = $params['headers']['Content-Type'] ??
+			$this->getContentType( $params['dst'], $params['content'], null );
+
+		return $this->createOrStore( $params, $sha1, $contentType );
 	}
 
-	// phpcs:disable Generic.Files.LineLength.TooLong
+	/**
+	 * Create a new GCS object from a local file.
+	 * @param array $params
+	 * @return Status
+	 *
+	 * @phan-param array{src:string,dst:string,headers?:array<string,string>} $params
+	 */
+	protected function doStoreInternal( array $params ) {
+		$params['content'] = fopen( $params['src'], 'r' );
+		$sha1 = sha1_file( $params['src'] );
+		$contentType = $params['headers']['Content-Type'] ??
+			$this->getContentType( $params['dst'], null, $params['src'] );
+
+		return $this->createOrStore( $params, $sha1, $contentType );
+	}
 
 	/**
 	 * Copy an existing GCS object into another GCS object.
