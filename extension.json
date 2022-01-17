@@ -24,7 +24,9 @@
 	"callback": "GCSHooks::register",
 	"config": {
 		"GCSBucket": null,
-		"GCSCredentials": null
+		"GCSCredentials": null,
+		"GCSForeignWikiDB": null,
+		"GCSForeignWikiServer": null
 	},
 	"manifest_version": 1
 }
