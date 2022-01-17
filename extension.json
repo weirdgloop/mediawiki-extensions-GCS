@@ -26,7 +26,8 @@
 		"GCSBucket": null,
 		"GCSCredentials": null,
 		"GCSForeignWikiDB": null,
-		"GCSForeignWikiServer": null
+		"GCSForeignWikiServer": null,
+		"GCSPublic": true
 	},
 	"manifest_version": 1
 }
