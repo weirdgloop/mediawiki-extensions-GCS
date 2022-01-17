@@ -58,17 +58,19 @@ class GCSHooks {
 			'containerPaths' => self::getContainerPaths( $zones, $repoName, $wikiId ),
 		];
 
+		$isPublicWiki = MediaWiki\MediaWikiServices::getInstance()->getPermissionManager()->isEveryoneAllowed( 'read' );
 		$wgLocalFileRepo = [
 			'class' => LocalRepo::class,
 			'name' => $repoName,
 			'backend' => $repoBackendName,
 			'scriptDirUrl' => $wgScriptPath,
-			'url' => $wgScriptPath . '/images',
+			'url' => $wgScriptPath . ( $isPublicWiki ? '/images' : '/img_auth.php' ),
 			'hashLevels' => 0,
 			'thumbScriptUrl' => $wgThumbnailScriptPath,
 			'transformVia404' => true,
 			'deletedHashLevels' => 0,
-			'zones' => self::getZonesConf( $zones, $publicZones ),
+			'isPrivate' => !$isPublicWiki,
+			'zones' => self::getZonesConf( $zones, $isPublicWiki ? $publicZones : [] ),
 		];
 
 		/* Register foreign file repository and its backend. */
