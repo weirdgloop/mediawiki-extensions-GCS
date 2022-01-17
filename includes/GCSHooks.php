@@ -30,6 +30,7 @@ class GCSHooks {
 	 */
 	public static function register() {
 		global $wgFileBackends, $wgLocalFileRepo, $wgScriptPath, $wgThumbnailScriptPath;
+		global $wgForeignFileRepos, $wgGCSForeignWikiDB, $wgGCSForeignWikiServer;
 
 		/* Needed zones */
 		$privateZones = [
@@ -45,44 +46,87 @@ class GCSHooks {
 		];
 		$zones = [ ...$privateZones, ...$publicZones ];
 
+		/* Register local file repository and its backend. */
+		$wikiId = WikiMap::getCurrentWikiId();
+		$repoName = 'local';
+		$repoBackendName = $repoName . '-gcs';
+		$wgFileBackends[] = [
+			'class' => GCSFileBackend::class,
+			'name' => $repoBackendName,
+			'domainId' => $wikiId,
+			'lockManager' => 'nullLockManager',
+			'containerPaths' => self::getContainerPaths( $zones, $repoName, $wikiId ),
+		];
+
 		$wgLocalFileRepo = [
 			'class' => LocalRepo::class,
-			'name' => 'local',
-			'backend' => 'local-gcs',
+			'name' => $repoName,
+			'backend' => $repoBackendName,
 			'scriptDirUrl' => $wgScriptPath,
 			'url' => $wgScriptPath . '/images',
 			'hashLevels' => 0,
 			'thumbScriptUrl' => $wgThumbnailScriptPath,
 			'transformVia404' => true,
 			'deletedHashLevels' => 0,
-			'zones' => array_fill_keys( $zones, [ 'url' => false ] ),
+			'zones' => self::getZonesConf( $zones, $publicZones ),
 		];
 
-		// Not a private wiki: $publicZones must have an URL
-		foreach ( $publicZones as $zone ) {
-			$wgLocalFileRepo['zones'][$zone] = [
-				'url' => '/images' . self::getRootForZone($zone)
+		/* Register foreign file repository and its backend. */
+		if ( $wgGCSForeignWikiDB && $wgGCSForeignWikiServer ) {
+			$repoName = 'shared-' . $wgGCSForeignWikiDB;
+			$repoBackendName = $repoName . '-gcs';
+			$wgFileBackends[] = [
+				'class' => GCSFileBackend::class,
+				'name' => $repoBackendName,
+				'domainId' => $wgGCSForeignWikiDB,
+				'lockManager' => 'nullLockManager',
+				'containerPaths' => self::getContainerPaths( $zones, $repoName, $wgGCSForeignWikiDB ),
+			];
+
+			$wgForeignFileRepos[] = [
+				'class' => ForeignDBViaLBRepo::class,
+				'name' => $repoName,
+				'backend' => $repoBackendName,
+				'scriptDirUrl' => $wgGCSForeignWikiServer . $wgScriptPath,
+				'url' => $wgGCSForeignWikiServer . $wgScriptPath . '/images',
+				'hashLevels' => 0,
+				'thumbScriptUrl' => $wgThumbnailScriptPath ? ( $wgGCSForeignWikiServer . $wgThumbnailScriptPath ) : false,
+				'transformVia404' => true,
+				'deletedHashLevels' => 0,
+				'zones' => self::getZonesConf( $zones, $publicZones, $wgGCSForeignWikiServer ),
+				// Foreign file repository specific properties.
+				'descBaseUrl' => $wgGCSForeignWikiServer . '/w/File:',
+				'fetchDescription' => true,
+				'hasSharedCache' => true,
+				'wiki' => $wgGCSForeignWikiDB,
 			];
 		}
+	}
 
-		// Container names are prefixed by wfWikiID(), which depends on $wgDBPrefix and $wgDBname.
-		$wikiId = wfWikiID();
+	private static function getContainerPaths( $zones, $repoName, $wikiId ) {
 		$containerPaths = [];
 		foreach ( $zones as $zone ) {
-			$containerPaths["$wikiId-local-$zone"] = $wikiId . self::getRootForZone($zone);
+			$containerPaths["$wikiId-$repoName-$zone"] = $wikiId . self::getRootForZone($zone);
 		}
 		// GloopTweaks's "sitemaps" is unfortunately special.
 		$containerPaths["$wikiId-sitemaps"] = $wikiId . self::getRootForZone('sitemaps');
 		// EasyTimeline is unfortunately special.
 		$containerPaths["$wikiId-timeline-render"] = $wikiId . self::getRootForZone('timeline');
 
-		$wgFileBackends[] = [
-			'class' => GCSFileBackend::class,
-			'name' => 'local-gcs',
-			'domainId' => $wikiId,
-			'lockManager' => 'nullLockManager',
-			'containerPaths' => $containerPaths,
-		];
+		return $containerPaths;
+	}
+
+	private static function getZonesConf( $zones, $publicZones, $baseUrl = '' ) {
+		$zonesConf = array_fill_keys( $zones, [ 'url' => false ] );
+
+		// Not a private wiki: $publicZones must have an URL
+		foreach ( $publicZones as $zone ) {
+			$zonesConf[$zone] = [
+				'url' => $baseUrl . '/images' . self::getRootForZone($zone)
+			];
+		}
+
+		return $zonesConf;
 	}
 
 	/**
