@@ -69,7 +69,7 @@ class GCSHooks {
 			'transformVia404' => true,
 			'deletedHashLevels' => 0,
 			'isPrivate' => !$wgGCSPublic,
-			'zones' => self::getZonesConf( $zones, $wgGCSPublic ? $publicZones : [] ),
+			'zones' => self::getZonesConf( $zones, $publicZones, ( $wgGCSPublic ? '/images' : '/img_auth.php' ) ),
 		];
 
 		/* Register foreign file repository and its backend. */
@@ -94,7 +94,7 @@ class GCSHooks {
 				'thumbScriptUrl' => $wgThumbnailScriptPath ? ( $wgGCSForeignWikiServer . $wgThumbnailScriptPath ) : false,
 				'transformVia404' => true,
 				'deletedHashLevels' => 0,
-				'zones' => self::getZonesConf( $zones, $publicZones, $wgGCSForeignWikiServer ),
+				'zones' => self::getZonesConf( $zones, $publicZones, $wgGCSForeignWikiServer . '/images' ),
 				// Foreign file repository specific properties.
 				'descBaseUrl' => $wgGCSForeignWikiServer . '/w/File:',
 				'fetchDescription' => true,
@@ -117,13 +117,13 @@ class GCSHooks {
 		return $containerPaths;
 	}
 
-	private static function getZonesConf( $zones, $publicZones, $baseUrl = '' ) {
+	private static function getZonesConf( $zones, $publicZones, $baseUrl ) {
 		$zonesConf = array_fill_keys( $zones, [ 'url' => false ] );
 
 		// Not a private wiki: $publicZones must have an URL
 		foreach ( $publicZones as $zone ) {
 			$zonesConf[$zone] = [
-				'url' => $baseUrl . '/images' . self::getRootForZone($zone)
+				'url' => $baseUrl . self::getRootForZone($zone)
 			];
 		}
 
