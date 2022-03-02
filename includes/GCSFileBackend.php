@@ -185,7 +185,7 @@ class GCSFileBackend extends FileBackendStore {
 	 */
 	protected function doCreateInternal( array $params ) {
 		$sha1 = sha1( $params['content'] );
-		$contentType = $params['headers']['Content-Type'] ??
+		$contentType = $params['headers']['content-type'] ??
 			$this->getContentType( $params['dst'], $params['content'], null );
 
 		return $this->createOrStore( $params, $sha1, $contentType );
@@ -201,7 +201,7 @@ class GCSFileBackend extends FileBackendStore {
 	protected function doStoreInternal( array $params ) {
 		$params['content'] = fopen( $params['src'], 'r' );
 		$sha1 = sha1_file( $params['src'] );
-		$contentType = $params['headers']['Content-Type'] ??
+		$contentType = $params['headers']['content-type'] ??
 			$this->getContentType( $params['dst'], null, $params['src'] );
 
 		return $this->createOrStore( $params, $sha1, $contentType );
