@@ -87,7 +87,7 @@ class GCSFileBackend extends FileBackendStore {
 		$this->bucket = $client->bucket($wgGCSBucket);
 
 		$this->containerPaths = $config['containerPaths'] ?? [];
-		$this->statCache = wfGetMainCache();
+		$this->statCache = ObjectCache::getLocalClusterInstance();
 	}
 
 	/**
