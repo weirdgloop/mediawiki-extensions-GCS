@@ -42,7 +42,7 @@ class GCSNameIterator extends IteratorIterator {
 		$this->prefix = $prefix;
 	}
 
-	public function current() {
+	public function current(): string {
 		return substr(parent::current()->name(), strlen($this->prefix));
 	}
 }
