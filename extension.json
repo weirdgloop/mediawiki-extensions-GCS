@@ -27,7 +27,8 @@
 		"GCSCredentials": null,
 		"GCSForeignWikiDB": null,
 		"GCSForeignWikiServer": null,
-		"GCSPublic": true
+		"GCSPublic": true,
+		"GCSThumbProxyUrl": null
 	},
 	"manifest_version": 1
 }

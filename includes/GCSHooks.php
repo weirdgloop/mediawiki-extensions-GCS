@@ -30,7 +30,7 @@ class GCSHooks {
 	 */
 	public static function register() {
 		global $wgFileBackends, $wgLocalFileRepo, $wgScriptPath, $wgThumbnailScriptPath;
-		global $wgForeignFileRepos, $wgGCSForeignWikiDB, $wgGCSForeignWikiServer, $wgGCSPublic;
+		global $wgForeignFileRepos, $wgGCSForeignWikiDB, $wgGCSForeignWikiServer, $wgGCSPublic, $wgGCSThumbProxyUrl;
 
 		/* Needed zones */
 		$privateZones = [
@@ -71,6 +71,13 @@ class GCSHooks {
 			'isPrivate' => !$wgGCSPublic,
 			'zones' => self::getZonesConf( $zones, $publicZones, ( $wgGCSPublic ? '/images' : '/img_auth.php' ) ),
 		];
+
+		// Use external thumbnailing.
+		if ( $wgGCSThumbProxyUrl ) {
+			// Disable local thumbnailing if external thumbnailing is being used.
+			$wgLocalFileRepo['disableLocalTransform'] = true;
+			$wgLocalFileRepo['thumbProxyUrl'] = $wgGCSThumbProxyUrl;
+		}
 
 		/* Register foreign file repository and its backend. */
 		if ( $wgGCSForeignWikiDB && $wgGCSForeignWikiServer ) {
