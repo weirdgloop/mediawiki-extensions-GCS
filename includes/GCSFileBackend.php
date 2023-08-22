@@ -306,10 +306,11 @@ class GCSFileBackend extends FileBackendStore {
 	protected function doGetFileStat( array $params ) {
 		$src = $params['src'];
 		$cacheKey = $this->getStatCacheKey( $src );
+		$requireSHA1 = !empty( $params['requireSHA1'] );
 
 		$result = $this->statCache->get( $cacheKey );
-		if ( $result === false ) { /* Not found in the cache */
-			$result = $this->statUncached( $src );
+		if ( $result === false || ( $requireSHA1 && $result['sha1'] === false ) ) { /* Not found in the cache */
+			$result = $this->statUncached( $src, $requireSHA1 );
 			$this->statCache->set( $cacheKey, $result, 604800 ); // 7 days, since we invalidate the cache
 		}
 
@@ -319,11 +320,12 @@ class GCSFileBackend extends FileBackendStore {
 	/**
 	* Uncached version of doGetFileStat(). Shouldn't be used outside of doGetFileStat().
 	* @param string $src
+	* @param bool $requireSHA1
 	* @return array|false|null
 	*
 	* @phan-return array{mtime:string,size:int,etag:string,sha1:string}|false|null
 	*/
-	protected function statUncached( $src ) {
+	protected function statUncached( $src, $requireSHA1 ) {
 		$key = $this->getGCSName( $src );
 
 		if ( $key === null ) {
@@ -343,7 +345,11 @@ class GCSFileBackend extends FileBackendStore {
 			return false;
 		}
 
-		$sha1 = $res['metadata']['sha1base36'] ?? '';
+		$sha1 = $res['metadata']['sha1base36'] ?? false;
+
+		if ( $requireSHA1 && $sha1 === false ) {
+			$sha1 = $this->addMissingHashMetadata( $key, $src );
+		}
 
 		return [
 			'mtime' => wfTimestamp( TS_MW, $res['updated'] ),
@@ -412,6 +418,34 @@ class GCSFileBackend extends FileBackendStore {
 		$val = new GCSNameIterator($this->bucket->objects(['prefix' => $dir]), $dir);
 		wfDebugLog("gcs", "listfiles_end " . strval(microtime(true)) . " " . $dir);
 		return $val;
+	}
+
+	// From https://github.com/wikimedia/mediawiki/blob/361d83736c79f148c39058664ee5b2ba676dc356/includes/libs/filebackend/SwiftFileBackend.php#L1125
+	protected function doGetFileSha1base36( array $params ) {
+		// Avoid using stat entries from file listings, which never include the SHA-1 hash.
+		// Also, recompute the hash if it's not part of the metadata headers for some reason.
+		$params['requireSHA1'] = true;
+
+		$stat = $this->getFileStat( $params );
+		if ( is_array( $stat ) ) {
+			return $stat['sha1'];
+		}
+
+		return ( $stat === self::$RES_ERROR ) ? self::$RES_ERROR : self::$RES_ABSENT;
+	}
+
+	// Based on https://github.com/wikimedia/mediawiki/blob/361d83736c79f148c39058664ee5b2ba676dc356/includes/libs/filebackend/SwiftFileBackend.php#L781
+	protected function addMissingHashMetadata( $key, $src ) {
+		$sha1Hash = false;
+		$tmpFile = $this->getLocalCopy( [ 'src' => $src, 'latest' => 1 ] );
+		if ( $tmpFile ) {
+			$sha1Hash = $tmpFile->getSha1Base36();
+			if ( $sha1Hash !== false ) {
+				$this->bucket->object( $key )->update( [ 'metadata' => [ 'sha1base36' => $sha1Hash ] ] );
+			}
+		}
+
+		return $sha1Hash;
 	}
 
 	/**
