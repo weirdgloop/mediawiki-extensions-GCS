@@ -448,52 +448,27 @@ class GCSFileBackend extends FileBackendStore {
 		return $sha1Hash;
 	}
 
-	/**
-	 * Download GCS object $src.
-	 * @param string $src
-	 * @return FSFile|null Local temporary file that contains downloaded contents.
-	 */
-	protected function getLocalCopyCached( $src ) {
-		$ext = FSFile::extensionFromPath( $src );
-		$file = TempFSFile::factory( 'localcopy_', $ext );
-		$dstPath = $file->getPath();
-
-		if ( $file->exists() && $file->getSize() > 0 ) { // Found in cache
-			return $file;
-		}
-
-		wfDebugLog("gcs", "cp_start " . strval(microtime(true)) . " " . $src);
-		// Not found in the cache. Download from GCS.
-		$srcPath = $this->getFileHttpUrl( [ 'src' => $src ] );
-		if ( !$srcPath ) {
-			return null; // Not found: no such object in GCS
-		}
-
-		wfMkdirParents( dirname( $dstPath ) );
-
-		$ok = copy( $srcPath, $dstPath );
-
-		wfDebugLog("gcs", "cp_end " . strval(microtime(true)) . " " . $src);
-
-		if ( !$ok ) {
-			return null; // Couldn't download the file from GCS (e.g. network issue)
-		}
-		return $file;
-	}
-
 	protected function doGetLocalCopyMulti( array $params ) {
 		$fsFiles = [];
 		$sources = $params['srcs'] ?? (array)$params['src'];
 
 		foreach ( $sources as $src ) {
-			// TODO: remove this duplicate check, getFileHttpUrl() already checks this.
+			$file = null;
 			$key = $this->getGCSName( $src );
-			if ( $key === null ) {
-				$fsFiles[$src] = null;
-				continue;
-			}
+			if ( $key !== null ) {
+				try {
+					$ext = FileBackend::extensionFromPath( $src );
+					$file = TempFSFile::factory( 'localcopy_', $ext );
 
-			$fsFiles[$src] = $this->getLocalCopyCached( $src );
+					wfDebugLog("gcs", "cp_start " . strval(microtime(true)) . " " . $src);
+					$this->bucket->object($key)->downloadToFile( $file->getPath() );
+					wfDebugLog("gcs", "cp_end " . strval(microtime(true)) . " " . $src);
+				} catch ( GoogleException $e ) {
+					wfDebugLog("gcs", "cp_end " . strval(microtime(true)) . " " . $src);
+					$file = null;
+				}
+			}
+			$fsFiles[$src] = $file;
 		}
 		return $fsFiles;
 	}
