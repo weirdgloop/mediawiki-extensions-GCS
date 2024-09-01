@@ -69,7 +69,7 @@ class GCSHooks {
 			'transformVia404' => true,
 			'deletedHashLevels' => 0,
 			'isPrivate' => !$wgGCSPublic,
-			'zones' => self::getZonesConf( $zones, $publicZones, ( $wgGCSPublic ? '/images' : '/img_auth.php' ) ),
+			'zones' => self::getZonesConf( $zones, $publicZones, $wgScriptPath . ( $wgGCSPublic ? '/images' : '/img_auth.php' ) ),
 		];
 
 		// Use external thumbnailing.
