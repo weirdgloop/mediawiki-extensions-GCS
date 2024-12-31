@@ -26,6 +26,7 @@ if ( !class_exists( "\\Google\\Cloud\\Storage\\StorageClient" ) ) {
 }
 
 use Google\Cloud\Core\Exception\GoogleException;
+use Google\Cloud\Core\Exception\NotFoundException;
 use Google\Cloud\Storage\StorageClient;
 use Psr\Log\LogLevel;
 
@@ -247,11 +248,17 @@ class GCSFileBackend extends FileBackendStore {
 
 		$object = $this->getBucket()->object($srcKey);
 		global $wgGCSBucket;
-		wfDebugLog("gcs", "copy_start " . strval(microtime(true)) . " " . $dstKey);
-		$object->copy($wgGCSBucket, ['name' => $dstKey]);
-		wfDebugLog("gcs", "copy_end " . strval(microtime(true)) . " " . $dstKey);
+		try {
+			wfDebugLog("gcs", "copy_start " . strval(microtime(true)) . " " . $dstKey);
+			$object->copy( $wgGCSBucket, ['name' => $dstKey] );
+			wfDebugLog("gcs", "copy_end " . strval(microtime(true)) . " " . $dstKey);
+		} catch ( NotFoundException $e ) {
+			if ( empty( $params['ignoreMissingSource'] ) ) {
+				$status->fatal( 'backend-fail-copy', $params['src'] );
+			}
+		}
 		$this->invalidateCacheFor( $params['dst'] );
-		return Status::newGood();
+		return $status;
 	}
 
 	/**
@@ -269,11 +276,19 @@ class GCSFileBackend extends FileBackendStore {
 			$status->fatal( 'backend-fail-invalidpath', $params['src'] );
 			return $status;
 		}
-		wfDebugLog("gcs", "delete_start " . strval(microtime(true)) . " " . $key);
-		$res = $this->getBucket()->object($key)->delete();
-		wfDebugLog("gcs", "delete_end " . strval(microtime(true)) . " " . $key);
+
+		try {
+			wfDebugLog("gcs", "delete_start " . strval(microtime(true)) . " " . $key);
+			$this->getBucket()->object($key)->delete();
+			wfDebugLog("gcs", "delete_end " . strval(microtime(true)) . " " . $key);
+		} catch ( NotFoundException $e ) {
+			if ( empty( $params['ignoreMissingSource'] ) ) {
+				$status->fatal( 'backend-fail-delete', $params['src'] );
+			}
+		}
+
 		$this->invalidateCacheFor( $params['src'] );
-		return Status::newGood();
+		return $status;
 	}
 
 	/**
