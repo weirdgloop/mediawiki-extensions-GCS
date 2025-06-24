@@ -554,4 +554,22 @@ class GCSFileBackend extends FileBackendStore {
 	protected function doSecureInternal( $container, $dir, array $params ) {
 		return Status::newGood();
 	}
+
+	/**
+	 * Move an existing GCS object.
+	 * @param array $params
+	 * @return Status
+	 *
+	 * @phan-param array{src:string,dst:string,headers?:array<string,string>,ignoreMissingSource?:bool} $params
+	 */
+	protected function doMoveInternal( array $params ) {
+		// Copy the object, and if successful, delete the source.
+		$status = $this->doCopyInternal( $params );
+		if ( !$status->isOK() ) {
+			return $status;
+		}
+
+		$status->merge( $this->doDeleteInternal( $params ) );
+		return $status;
+	}
 }
