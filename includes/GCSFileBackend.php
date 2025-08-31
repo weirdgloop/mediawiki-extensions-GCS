@@ -92,11 +92,11 @@ class GCSFileBackend extends FileBackendStore {
 	 * least one remote HTTP request to Google Cloud.
 	 */
 	protected function getBucket() {
-		global $wgGCSBucket, $wgGCSCredentials;
+		global $wgGCSBucket, $wgGCSCredentials, $wgGCSEndpoint;
 
 		if ( !isset( $this->bucket ) ) {
 			// Initialise here rather than in the class constructor to avoid unnecessary HTTP requests.
-			$client = new StorageClient( [ 'keyFilePath' => $wgGCSCredentials ] );
+			$client = new StorageClient( [ 'apiEndpoint' => $wgGCSEndpoint, 'keyFilePath' => $wgGCSCredentials ] );
 			$this->bucket = $client->bucket( $wgGCSBucket );
 		}
 

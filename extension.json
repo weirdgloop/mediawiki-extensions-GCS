@@ -25,6 +25,7 @@
 	"config": {
 		"GCSBucket": null,
 		"GCSCredentials": null,
+		"GCSEndpoint": null,
 		"GCSForeignWikiDB": null,
 		"GCSForeignWikiServer": null,
 		"GCSPublic": true,
