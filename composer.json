@@ -9,7 +9,7 @@
 		"source": "https://gitlab.com/weirdgloop/mediawiki-gcs.git"
 	},
 	"require": {
-		"google/cloud-storage": "^1.25.0",
+		"google/cloud-storage": "^1.48",
 		"composer/installers": "^1.5"
 	},
 	"require-dev": {
