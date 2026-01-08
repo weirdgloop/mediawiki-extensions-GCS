@@ -21,6 +21,10 @@
  * @file
  */
 
+use MediaWiki\FileRepo\LocalRepo;
+use MediaWiki\FileRepo\ForeignDBViaLBRepo;
+use MediaWiki\WikiMap\WikiMap;
+
 /**
  * Hooks of Extension:GCS
  */

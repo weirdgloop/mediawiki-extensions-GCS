@@ -28,7 +28,11 @@ if ( !class_exists( "\\Google\\Cloud\\Storage\\StorageClient" ) ) {
 use Google\Cloud\Core\Exception\GoogleException;
 use Google\Cloud\Core\Exception\NotFoundException;
 use Google\Cloud\Storage\StorageClient;
+use MediaWiki\Status\Status;
 use Psr\Log\LogLevel;
+use Wikimedia\FileBackend\FileBackend;
+use Wikimedia\FileBackend\FileBackendStore;
+use Wikimedia\FileBackend\FSFile\TempFSFile;
 
 /**
  * FileBackend for Google Cloud Storage
