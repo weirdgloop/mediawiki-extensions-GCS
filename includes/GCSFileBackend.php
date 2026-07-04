@@ -442,12 +442,17 @@ class GCSFileBackend extends FileBackendStore {
 	 * @phan-param array{topOnly?:bool} $params
 	 */
 	public function getFileListInternal( $container, $dir, array $params ) {
-		$topOnly = !empty( $params['topOnly'] );
-		$prefix = $this->findContainerPrefix( $container );
-		$dir = $prefix . $dir;
-		wfDebugLog("gcs", "listfiles_start " . strval(microtime(true)) . " " . $dir);
-		$val = new GCSNameIterator($this->getBucket()->objects(['prefix' => $dir]), $dir);
-		wfDebugLog("gcs", "listfiles_end " . strval(microtime(true)) . " " . $dir);
+		$dir = $this->findContainerPrefix( $container ) . $dir;
+		if ( substr( $dir, -1 ) !== '/' ) {
+			$dir .= '/';
+		}
+		$opts = [ 'prefix' => $dir ];
+		if ( !empty( $params['topOnly'] ) ) {
+			$opts['delimiter'] = '/';
+		}
+		wfDebugLog( 'gcs', 'listfiles_start ' . strval( microtime( true ) ) . ' ' . $dir );
+		$val = new GCSNameIterator( $this->getBucket()->objects( $opts ), $dir );
+		wfDebugLog( 'gcs', 'listfiles_end ' . strval( microtime( true ) ) . ' ' . $dir );
 		return $val;
 	}
 
