@@ -100,7 +100,11 @@ class GCSFileBackend extends FileBackendStore {
 
 		if ( !isset( $this->bucket ) ) {
 			// Initialise here rather than in the class constructor to avoid unnecessary HTTP requests.
-			$client = new StorageClient( [ 'apiEndpoint' => $wgGCSEndpoint, 'keyFilePath' => $wgGCSCredentials ] );
+			$client = new StorageClient( [
+				'apiEndpoint' => $wgGCSEndpoint,
+				'keyFilePath' => $wgGCSCredentials,
+				'retryStrategy' => StorageClient::RETRY_ALWAYS,
+			] );
 			$this->bucket = $client->bucket( $wgGCSBucket );
 		}
 
