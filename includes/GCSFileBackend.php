@@ -99,7 +99,7 @@ class GCSFileBackend extends FileBackendStore {
 	protected function getBucket() {
 		global $wgGCSBucket, $wgGCSCredentials, $wgGCSEndpoint;
 
-		if ( !isset( $this->bucket ) ) {
+		if ( !$this->bucket ) {
 			// Initialise here rather than in the class constructor to avoid unnecessary HTTP requests.
 			$client = new StorageClient( [
 				'apiEndpoint' => $wgGCSEndpoint,
@@ -148,7 +148,7 @@ class GCSFileBackend extends FileBackendStore {
 	/**
 	 * Determine prefix of $container.
 	 * @param string $container Internal container name (e.g. mywiki-local-thumb).
-	 * @return string prefix.
+	 * @return string|null prefix.
 	 */
 	protected function findContainerPrefix( $container ) {
 		// In latter case, "dir1/dir2/" will be prepended to $filename.
@@ -162,7 +162,7 @@ class GCSFileBackend extends FileBackendStore {
 	/**
 	 * Calculates name of GCS object from storagePath.
 	 * @param string $storagePath Internal storage URL (mwstore://something/).
-	 * @return string object name
+	 * @return string|null object name
 	 */
 	protected function getGCSName( $storagePath ) {
 		[ $container, $filename ] = $this->resolveStoragePathReal( $storagePath );
@@ -258,13 +258,14 @@ class GCSFileBackend extends FileBackendStore {
 			return $status;
 		}
 
+		// @phan-suppress-next-line PhanTypeMismatchArgumentNullable TODO is this an actual issue?
 		$object = $this->getBucket()->object( $srcKey );
 		global $wgGCSBucket;
 		try {
 			wfDebugLog( "gcs", "copy_start " . strval( microtime( true ) ) . " " . $dstKey );
 			$object->copy( $wgGCSBucket, [ 'name' => $dstKey ] );
 			wfDebugLog( "gcs", "copy_end " . strval( microtime( true ) ) . " " . $dstKey );
-		} catch ( NotFoundException $e ) {
+		} catch ( NotFoundException ) {
 			if ( empty( $params['ignoreMissingSource'] ) ) {
 				$status->fatal( 'backend-fail-copy', $params['src'] );
 			}
@@ -293,7 +294,7 @@ class GCSFileBackend extends FileBackendStore {
 			wfDebugLog( "gcs", "delete_start " . strval( microtime( true ) ) . " " . $key );
 			$this->getBucket()->object( $key )->delete();
 			wfDebugLog( "gcs", "delete_end " . strval( microtime( true ) ) . " " . $key );
-		} catch ( NotFoundException $e ) {
+		} catch ( NotFoundException ) {
 			if ( empty( $params['ignoreMissingSource'] ) ) {
 				$status->fatal( 'backend-fail-delete', $params['src'] );
 			}
@@ -379,7 +380,7 @@ class GCSFileBackend extends FileBackendStore {
 			wfDebugLog( "gcs", "info_start " . strval( microtime( true ) ) . " " . $key );
 			$res = $this->getBucket()->object( $key )->info();
 			wfDebugLog( "gcs", "info_end " . strval( microtime( true ) ) . " " . $key );
-		} catch ( GoogleException $e ) {
+		} catch ( GoogleException ) {
 			wfDebugLog( "gcs", "info_endfail " . strval( microtime( true ) ) . " " . $key );
 			return false;
 		}
@@ -415,7 +416,7 @@ class GCSFileBackend extends FileBackendStore {
 			$val = $this->getBucket()->object( $key )->signedUrl( $expires );
 			wfDebugLog( "gcs", "figned_end " . strval( microtime( true ) ) . " " . $key );
 			return $val;
-		} catch ( GoogleException $e ) {
+		} catch ( GoogleException ) {
 			return null;
 		}
 	}
@@ -478,7 +479,7 @@ class GCSFileBackend extends FileBackendStore {
 			return $stat['sha1'];
 		}
 
-		return ( $stat === self::$RES_ERROR ) ? self::$RES_ERROR : self::$RES_ABSENT;
+		return ( $stat === self::RES_ERROR ) ? self::RES_ERROR : self::RES_ABSENT;
 	}
 
 	/**
@@ -515,7 +516,7 @@ class GCSFileBackend extends FileBackendStore {
 					wfDebugLog( "gcs", "cp_start " . strval( microtime( true ) ) . " " . $src );
 					$this->getBucket()->object( $key )->downloadToFile( $file->getPath() );
 					wfDebugLog( "gcs", "cp_end " . strval( microtime( true ) ) . " " . $src );
-				} catch ( GoogleException $e ) {
+				} catch ( GoogleException ) {
 					wfDebugLog( "gcs", "cp_end " . strval( microtime( true ) ) . " " . $src );
 					$file = null;
 				}
