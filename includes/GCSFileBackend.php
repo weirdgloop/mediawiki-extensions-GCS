@@ -27,6 +27,7 @@ if ( !class_exists( "\\Google\\Cloud\\Storage\\StorageClient" ) ) {
 
 use Google\Cloud\Core\Exception\GoogleException;
 use Google\Cloud\Core\Exception\NotFoundException;
+use Google\Cloud\Storage\Bucket;
 use Google\Cloud\Storage\StorageClient;
 use MediaWiki\Status\Status;
 use Wikimedia\FileBackend\FileBackend;
@@ -43,7 +44,7 @@ use Wikimedia\FileBackend\FSFile\TempFSFile;
  */
 class GCSFileBackend extends FileBackendStore {
 	/**
-	 * GCS bucket to use. Do not use this variable directly, call $this->getBucket() instead.
+	 * @var Bucket|null GCS bucket to use. Do not use this variable directly, call $this->getBucket() instead.
 	 */
 	private $bucket;
 
@@ -92,6 +93,8 @@ class GCSFileBackend extends FileBackendStore {
 	/**
 	 * Returns an object representing the GCS bucket. When this method is called for the first time, it will make at
 	 * least one remote HTTP request to Google Cloud.
+	 *
+	 * @return Bucket
 	 */
 	protected function getBucket() {
 		global $wgGCSBucket, $wgGCSCredentials, $wgGCSEndpoint;
@@ -189,7 +192,10 @@ class GCSFileBackend extends FileBackendStore {
 		$sha1Hash = Wikimedia\base_convert( $sha1, 16, 36, 31, true, 'auto' );
 		// TODO: add sha1Hash
 		wfDebugLog( "gcs", "upload_start " . strval( microtime( true ) ) . " " . $key );
-		$ret = $this->getBucket()->upload( $params['content'], [ 'name' => $key, 'metadata' => [ 'metadata' => [ 'sha1base36' => $sha1Hash ] ] ] );
+		$ret = $this->getBucket()->upload(
+			$params['content'],
+			[ 'name' => $key, 'metadata' => [ 'metadata' => [ 'sha1base36' => $sha1Hash ] ] ]
+		);
 		wfDebugLog( "gcs", "upload_endoo " . strval( microtime( true ) ) . " " . $key );
 		$this->invalidateCacheFor( $params['dst'] );
 		return Status::newGood();
@@ -458,7 +464,10 @@ class GCSFileBackend extends FileBackendStore {
 		return $val;
 	}
 
-	// From https://github.com/wikimedia/mediawiki/blob/361d83736c79f148c39058664ee5b2ba676dc356/includes/libs/filebackend/SwiftFileBackend.php#L1125
+	/**
+	 * From https://github.com/wikimedia/mediawiki/blob/361d83736c79f148c39058664ee5b2ba676dc356/includes/libs/filebackend/SwiftFileBackend.php#L1125
+	 * @inheritDoc
+	 */
 	protected function doGetFileSha1base36( array $params ) {
 		// Avoid using stat entries from file listings, which never include the SHA-1 hash.
 		// Also, recompute the hash if it's not part of the metadata headers for some reason.
@@ -472,8 +481,13 @@ class GCSFileBackend extends FileBackendStore {
 		return ( $stat === self::$RES_ERROR ) ? self::$RES_ERROR : self::$RES_ABSENT;
 	}
 
-	// Based on https://github.com/wikimedia/mediawiki/blob/361d83736c79f148c39058664ee5b2ba676dc356/includes/libs/filebackend/SwiftFileBackend.php#L781
-	protected function addMissingHashMetadata( $key, $src ) {
+	/**
+	 * Based on https://github.com/wikimedia/mediawiki/blob/361d83736c79f148c39058664ee5b2ba676dc356/includes/libs/filebackend/SwiftFileBackend.php#L781
+	 *
+	 * @param string $key
+	 * @param string $src
+	 */
+	protected function addMissingHashMetadata( $key, $src ): bool|string {
 		$sha1Hash = false;
 		$tmpFile = $this->getLocalCopy( [ 'src' => $src, 'latest' => 1 ] );
 		if ( $tmpFile ) {
@@ -486,7 +500,7 @@ class GCSFileBackend extends FileBackendStore {
 		return $sha1Hash;
 	}
 
-	protected function doGetLocalCopyMulti( array $params ) {
+	protected function doGetLocalCopyMulti( array $params ): array {
 		$fsFiles = [];
 		$sources = $params['srcs'] ?? (array)$params['src'];
 

@@ -29,13 +29,12 @@ class GCSNameIterator extends IteratorIterator {
 	/** @var Iterator */
 	private $innerIterator;
 
-	private $prefix;
+	private string $prefix;
 
 	/**
 	 * Make an iterator that removes starting/trailing bytes of values from its internal iterator.
 	 * @param Iterator $iterator Internal iterator over strings that need trimming.
-	 * @param int $firstBytesToStrip How many starting bytes to remove.
-	 * @param int $lastBytesToStrip How many trailing bytes to remove.
+	 * @param string $prefix
 	 */
 	public function __construct( Iterator $iterator, string $prefix ) {
 		parent::__construct( $iterator );

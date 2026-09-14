@@ -73,7 +73,11 @@ class GCSHooks {
 			'transformVia404' => true,
 			'deletedHashLevels' => 0,
 			'isPrivate' => !$wgGCSPublic,
-			'zones' => self::getZonesConf( $zones, $publicZones, $wgScriptPath . ( $wgGCSPublic ? '/images' : '/img_auth.php' ) ),
+			'zones' => self::getZonesConf(
+				$zones,
+				$publicZones,
+				$wgScriptPath . ( $wgGCSPublic ? '/images' : '/img_auth.php' )
+			),
 		];
 
 		// Use external thumbnailing.
@@ -102,7 +106,9 @@ class GCSHooks {
 				'scriptDirUrl' => $wgGCSForeignWikiServer . $wgScriptPath,
 				'url' => $wgGCSForeignWikiServer . $wgScriptPath . '/images',
 				'hashLevels' => 0,
-				'thumbScriptUrl' => $wgThumbnailScriptPath ? ( $wgGCSForeignWikiServer . $wgThumbnailScriptPath ) : false,
+				'thumbScriptUrl' => $wgThumbnailScriptPath
+					? ( $wgGCSForeignWikiServer . $wgThumbnailScriptPath )
+					: false,
 				'transformVia404' => true,
 				'deletedHashLevels' => 0,
 				'zones' => self::getZonesConf( $zones, $publicZones, $wgGCSForeignWikiServer . '/images' ),
@@ -115,7 +121,7 @@ class GCSHooks {
 		}
 	}
 
-	private static function getContainerPaths( $zones, $repoName, $wikiId ) {
+	private static function getContainerPaths( array $zones, string $repoName, string $wikiId ): array {
 		$containerPaths = [];
 		foreach ( $zones as $zone ) {
 			$containerPaths["$wikiId-$repoName-$zone"] = $wikiId . self::getRootForZone( $zone );
@@ -128,7 +134,7 @@ class GCSHooks {
 		return $containerPaths;
 	}
 
-	private static function getZonesConf( $zones, $publicZones, $baseUrl ) {
+	private static function getZonesConf( array $zones, array $publicZones, string $baseUrl ): array {
 		$zonesConf = array_fill_keys( $zones, [ 'url' => false ] );
 
 		// Not a private wiki: $publicZones must have an URL
