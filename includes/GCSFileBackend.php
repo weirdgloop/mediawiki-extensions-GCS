@@ -29,7 +29,6 @@ use Google\Cloud\Core\Exception\GoogleException;
 use Google\Cloud\Core\Exception\NotFoundException;
 use Google\Cloud\Storage\StorageClient;
 use MediaWiki\Status\Status;
-use Psr\Log\LogLevel;
 use Wikimedia\FileBackend\FileBackend;
 use Wikimedia\FileBackend\FileBackendStore;
 use Wikimedia\FileBackend\FSFile\TempFSFile;
@@ -41,7 +40,6 @@ use Wikimedia\FileBackend\FSFile\TempFSFile;
  * @author Thai Phan <thai@outlook.com>
  * @author Edward Chernenko <edwardspec@gmail.com>
  * @author Jonathan Lee <cookmeplox@weirdgloop.org>
-
  */
 class GCSFileBackend extends FileBackendStore {
 	/**
@@ -59,9 +57,9 @@ class GCSFileBackend extends FileBackendStore {
 	private $containerPaths;
 
 	/**
-	* Cache used in doGetFileStat(). Avoids extra requests to doesObjectExist().
-	* @var BagOStuff
-	*/
+	 * Cache used in doGetFileStat(). Avoids extra requests to doesObjectExist().
+	 * @var BagOStuff
+	 */
 	private $statCache = null;
 
 	/**
@@ -147,7 +145,7 @@ class GCSFileBackend extends FileBackendStore {
 	/**
 	 * Determine prefix of $container.
 	 * @param string $container Internal container name (e.g. mywiki-local-thumb).
-	 * @return string: prefix.
+	 * @return string prefix.
 	 */
 	protected function findContainerPrefix( $container ) {
 		// In latter case, "dir1/dir2/" will be prepended to $filename.
@@ -164,7 +162,7 @@ class GCSFileBackend extends FileBackendStore {
 	 * @return string object name
 	 */
 	protected function getGCSName( $storagePath ) {
-		list( $container, $filename ) = $this->resolveStoragePathReal( $storagePath );
+		[ $container, $filename ] = $this->resolveStoragePathReal( $storagePath );
 		if ( $filename === null ) {
 			return null;
 		}
@@ -189,10 +187,10 @@ class GCSFileBackend extends FileBackendStore {
 		}
 
 		$sha1Hash = Wikimedia\base_convert( $sha1, 16, 36, 31, true, 'auto' );
-		//TODO: add sha1Hash
-		wfDebugLog("gcs", "upload_start " . strval(microtime(true)) . " " . $key);
-		$ret =  $this->getBucket()->upload($params['content'], ['name' => $key, 'metadata' => [ 'metadata' => ['sha1base36' => $sha1Hash ]]]);
-		wfDebugLog("gcs", "upload_endoo " . strval(microtime(true)) . " " . $key);
+		// TODO: add sha1Hash
+		wfDebugLog( "gcs", "upload_start " . strval( microtime( true ) ) . " " . $key );
+		$ret = $this->getBucket()->upload( $params['content'], [ 'name' => $key, 'metadata' => [ 'metadata' => [ 'sha1base36' => $sha1Hash ] ] ] );
+		wfDebugLog( "gcs", "upload_endoo " . strval( microtime( true ) ) . " " . $key );
 		$this->invalidateCacheFor( $params['dst'] );
 		return Status::newGood();
 	}
@@ -254,12 +252,12 @@ class GCSFileBackend extends FileBackendStore {
 			return $status;
 		}
 
-		$object = $this->getBucket()->object($srcKey);
+		$object = $this->getBucket()->object( $srcKey );
 		global $wgGCSBucket;
 		try {
-			wfDebugLog("gcs", "copy_start " . strval(microtime(true)) . " " . $dstKey);
-			$object->copy( $wgGCSBucket, ['name' => $dstKey] );
-			wfDebugLog("gcs", "copy_end " . strval(microtime(true)) . " " . $dstKey);
+			wfDebugLog( "gcs", "copy_start " . strval( microtime( true ) ) . " " . $dstKey );
+			$object->copy( $wgGCSBucket, [ 'name' => $dstKey ] );
+			wfDebugLog( "gcs", "copy_end " . strval( microtime( true ) ) . " " . $dstKey );
 		} catch ( NotFoundException $e ) {
 			if ( empty( $params['ignoreMissingSource'] ) ) {
 				$status->fatal( 'backend-fail-copy', $params['src'] );
@@ -286,9 +284,9 @@ class GCSFileBackend extends FileBackendStore {
 		}
 
 		try {
-			wfDebugLog("gcs", "delete_start " . strval(microtime(true)) . " " . $key);
-			$this->getBucket()->object($key)->delete();
-			wfDebugLog("gcs", "delete_end " . strval(microtime(true)) . " " . $key);
+			wfDebugLog( "gcs", "delete_start " . strval( microtime( true ) ) . " " . $key );
+			$this->getBucket()->object( $key )->delete();
+			wfDebugLog( "gcs", "delete_end " . strval( microtime( true ) ) . " " . $key );
 		} catch ( NotFoundException $e ) {
 			if ( empty( $params['ignoreMissingSource'] ) ) {
 				$status->fatal( 'backend-fail-delete', $params['src'] );
@@ -353,13 +351,13 @@ class GCSFileBackend extends FileBackendStore {
 	}
 
 	/**
-	* Uncached version of doGetFileStat(). Shouldn't be used outside of doGetFileStat().
-	* @param string $src
-	* @param bool $requireSHA1
-	* @return array|false|null
-	*
-	* @phan-return array{mtime:string,size:int,etag:string,sha1:string}|false|null
-	*/
+	 * Uncached version of doGetFileStat(). Shouldn't be used outside of doGetFileStat().
+	 * @param string $src
+	 * @param bool $requireSHA1
+	 * @return array|false|null
+	 *
+	 * @phan-return array{mtime:string,size:int,etag:string,sha1:string}|false|null
+	 */
 	protected function statUncached( $src, $requireSHA1 ) {
 		$key = $this->getGCSName( $src );
 
@@ -372,11 +370,11 @@ class GCSFileBackend extends FileBackendStore {
 		// 2) if the bucket doesn't exist, there is no point in repeating this operation
 		// after creating it, because the result will still be "file not found".
 		try {
-			wfDebugLog("gcs", "info_start " . strval(microtime(true)) . " " . $key);
-			$res = $this->getBucket()->object($key)->info();
-			wfDebugLog("gcs", "info_end " . strval(microtime(true)) . " " . $key);
+			wfDebugLog( "gcs", "info_start " . strval( microtime( true ) ) . " " . $key );
+			$res = $this->getBucket()->object( $key )->info();
+			wfDebugLog( "gcs", "info_end " . strval( microtime( true ) ) . " " . $key );
 		} catch ( GoogleException $e ) {
-			wfDebugLog("gcs", "info_endfail " . strval(microtime(true)) . " " . $key);
+			wfDebugLog( "gcs", "info_endfail " . strval( microtime( true ) ) . " " . $key );
 			return false;
 		}
 
@@ -407,9 +405,9 @@ class GCSFileBackend extends FileBackendStore {
 
 		$key = $this->getGCSName( $params['src'] );
 		try {
-			wfDebugLog("gcs", "figned_start " . strval(microtime(true)) . " " . $key);
-			$val = $this->getBucket()->object($key)->signedUrl($expires);
-			wfDebugLog("gcs", "figned_end " . strval(microtime(true)) . " " . $key);
+			wfDebugLog( "gcs", "figned_start " . strval( microtime( true ) ) . " " . $key );
+			$val = $this->getBucket()->object( $key )->signedUrl( $expires );
+			wfDebugLog( "gcs", "figned_end " . strval( microtime( true ) ) . " " . $key );
 			return $val;
 		} catch ( GoogleException $e ) {
 			return null;
@@ -429,10 +427,10 @@ class GCSFileBackend extends FileBackendStore {
 		$topOnly = !empty( $params['topOnly'] );
 		$prefix = $this->findContainerPrefix( $container );
 		$bucketDir = $prefix . $dir; // Relative to GCS bucket $bucket, not $container
-		wfDebugLog("gcs", "listdir_start " . strval(microtime(true)) . " " . $bucketDir);
+		wfDebugLog( "gcs", "listdir_start " . strval( microtime( true ) ) . " " . $bucketDir );
 		// TODO: this doesn't work
-		$val = $this->getBucket()->objects(['prefix' => $bucketDir]);
-		wfDebugLog("gcs", "listdir_end " . strval(microtime(true)) . " " . $bucketDir);
+		$val = $this->getBucket()->objects( [ 'prefix' => $bucketDir ] );
+		wfDebugLog( "gcs", "listdir_end " . strval( microtime( true ) ) . " " . $bucketDir );
 		return $val;
 	}
 
@@ -500,11 +498,11 @@ class GCSFileBackend extends FileBackendStore {
 					$ext = FileBackend::extensionFromPath( $src );
 					$file = TempFSFile::factory( 'localcopy_', $ext );
 
-					wfDebugLog("gcs", "cp_start " . strval(microtime(true)) . " " . $src);
-					$this->getBucket()->object($key)->downloadToFile( $file->getPath() );
-					wfDebugLog("gcs", "cp_end " . strval(microtime(true)) . " " . $src);
+					wfDebugLog( "gcs", "cp_start " . strval( microtime( true ) ) . " " . $src );
+					$this->getBucket()->object( $key )->downloadToFile( $file->getPath() );
+					wfDebugLog( "gcs", "cp_end " . strval( microtime( true ) ) . " " . $src );
 				} catch ( GoogleException $e ) {
-					wfDebugLog("gcs", "cp_end " . strval(microtime(true)) . " " . $src);
+					wfDebugLog( "gcs", "cp_end " . strval( microtime( true ) ) . " " . $src );
 					$file = null;
 				}
 			}

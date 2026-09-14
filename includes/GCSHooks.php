@@ -21,8 +21,8 @@
  * @file
  */
 
-use MediaWiki\FileRepo\LocalRepo;
 use MediaWiki\FileRepo\ForeignDBViaLBRepo;
+use MediaWiki\FileRepo\LocalRepo;
 use MediaWiki\WikiMap\WikiMap;
 
 /**
@@ -118,12 +118,12 @@ class GCSHooks {
 	private static function getContainerPaths( $zones, $repoName, $wikiId ) {
 		$containerPaths = [];
 		foreach ( $zones as $zone ) {
-			$containerPaths["$wikiId-$repoName-$zone"] = $wikiId . self::getRootForZone($zone);
+			$containerPaths["$wikiId-$repoName-$zone"] = $wikiId . self::getRootForZone( $zone );
 		}
 		// GloopTweaks's "sitemaps" is unfortunately special.
-		$containerPaths["$wikiId-sitemaps"] = $wikiId . self::getRootForZone('sitemaps');
+		$containerPaths["$wikiId-sitemaps"] = $wikiId . self::getRootForZone( 'sitemaps' );
 		// EasyTimeline is unfortunately special.
-		$containerPaths["$wikiId-timeline-render"] = $wikiId . self::getRootForZone('timeline');
+		$containerPaths["$wikiId-timeline-render"] = $wikiId . self::getRootForZone( 'timeline' );
 
 		return $containerPaths;
 	}
@@ -134,7 +134,7 @@ class GCSHooks {
 		// Not a private wiki: $publicZones must have an URL
 		foreach ( $publicZones as $zone ) {
 			$zonesConf[$zone] = [
-				'url' => $baseUrl . self::getRootForZone($zone)
+				'url' => $baseUrl . self::getRootForZone( $zone )
 			];
 		}
 

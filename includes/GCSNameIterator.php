@@ -29,7 +29,7 @@ class GCSNameIterator extends IteratorIterator {
 	/** @var Iterator */
 	private $innerIterator;
 
-    private $prefix;
+	private $prefix;
 
 	/**
 	 * Make an iterator that removes starting/trailing bytes of values from its internal iterator.
@@ -37,12 +37,12 @@ class GCSNameIterator extends IteratorIterator {
 	 * @param int $firstBytesToStrip How many starting bytes to remove.
 	 * @param int $lastBytesToStrip How many trailing bytes to remove.
 	 */
-	public function __construct( Iterator $iterator, String $prefix) {
+	public function __construct( Iterator $iterator, string $prefix ) {
 		parent::__construct( $iterator );
 		$this->prefix = $prefix;
 	}
 
 	public function current(): string {
-		return substr(parent::current()->name(), strlen($this->prefix));
+		return substr( parent::current()->name(), strlen( $this->prefix ) );
 	}
 }
