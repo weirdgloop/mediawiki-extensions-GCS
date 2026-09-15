@@ -21,8 +21,8 @@
  * @file
  */
 
-use MediaWiki\FileRepo\LocalRepo;
 use MediaWiki\FileRepo\ForeignDBViaLBRepo;
+use MediaWiki\FileRepo\LocalRepo;
 use MediaWiki\WikiMap\WikiMap;
 
 /**
@@ -73,7 +73,11 @@ class GCSHooks {
 			'transformVia404' => true,
 			'deletedHashLevels' => 0,
 			'isPrivate' => !$wgGCSPublic,
-			'zones' => self::getZonesConf( $zones, $publicZones, $wgScriptPath . ( $wgGCSPublic ? '/images' : '/img_auth.php' ) ),
+			'zones' => self::getZonesConf(
+				$zones,
+				$publicZones,
+				$wgScriptPath . ( $wgGCSPublic ? '/images' : '/img_auth.php' )
+			),
 		];
 
 		// Use external thumbnailing.
@@ -102,7 +106,9 @@ class GCSHooks {
 				'scriptDirUrl' => $wgGCSForeignWikiServer . $wgScriptPath,
 				'url' => $wgGCSForeignWikiServer . $wgScriptPath . '/images',
 				'hashLevels' => 0,
-				'thumbScriptUrl' => $wgThumbnailScriptPath ? ( $wgGCSForeignWikiServer . $wgThumbnailScriptPath ) : false,
+				'thumbScriptUrl' => $wgThumbnailScriptPath
+					? ( $wgGCSForeignWikiServer . $wgThumbnailScriptPath )
+					: false,
 				'transformVia404' => true,
 				'deletedHashLevels' => 0,
 				'zones' => self::getZonesConf( $zones, $publicZones, $wgGCSForeignWikiServer . '/images' ),
@@ -115,26 +121,26 @@ class GCSHooks {
 		}
 	}
 
-	private static function getContainerPaths( $zones, $repoName, $wikiId ) {
+	private static function getContainerPaths( array $zones, string $repoName, string $wikiId ): array {
 		$containerPaths = [];
 		foreach ( $zones as $zone ) {
-			$containerPaths["$wikiId-$repoName-$zone"] = $wikiId . self::getRootForZone($zone);
+			$containerPaths["$wikiId-$repoName-$zone"] = $wikiId . self::getRootForZone( $zone );
 		}
 		// GloopTweaks's "sitemaps" is unfortunately special.
-		$containerPaths["$wikiId-sitemaps"] = $wikiId . self::getRootForZone('sitemaps');
+		$containerPaths["$wikiId-sitemaps"] = $wikiId . self::getRootForZone( 'sitemaps' );
 		// EasyTimeline is unfortunately special.
-		$containerPaths["$wikiId-timeline-render"] = $wikiId . self::getRootForZone('timeline');
+		$containerPaths["$wikiId-timeline-render"] = $wikiId . self::getRootForZone( 'timeline' );
 
 		return $containerPaths;
 	}
 
-	private static function getZonesConf( $zones, $publicZones, $baseUrl ) {
+	private static function getZonesConf( array $zones, array $publicZones, string $baseUrl ): array {
 		$zonesConf = array_fill_keys( $zones, [ 'url' => false ] );
 
 		// Not a private wiki: $publicZones must have an URL
 		foreach ( $publicZones as $zone ) {
 			$zonesConf[$zone] = [
-				'url' => $baseUrl . self::getRootForZone($zone)
+				'url' => $baseUrl . self::getRootForZone( $zone )
 			];
 		}
 
