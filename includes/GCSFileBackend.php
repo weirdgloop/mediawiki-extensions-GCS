@@ -83,7 +83,7 @@ class GCSFileBackend extends FileBackendStore {
 
 		// Cache container information to mask latency
 		if ( isset( $config['wanCache'] ) && $config['wanCache'] instanceof WANObjectCache ) {
-			$this->memCache = $config['wanCache'];
+			$this->wanStatCache = $config['wanCache'];
 		}
 
 		$this->containerPaths = $config['containerPaths'] ?? [];
